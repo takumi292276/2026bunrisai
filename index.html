@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="景品ルーレット">
+<meta name="theme-color" content="#10283d">
+<title>文理祭クイズ景品ルーレット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+[hidden]{display:none!important}
+button,a{touch-action:manipulation; -webkit-tap-highlight-color:transparent}
+.guest h1{user-select:none; -webkit-user-select:none; cursor:default}
+:root{
+  color-scheme: dark;
+  --bg:#10283d; --bg2:#173a57; --panel:#1c4466; --line:#2d5b82;
+  --paper:#fdf6e3; --muted:#a9c3d8; --gold:#ffc93c; --coral:#ff6b57;
+  --mint:#3ecfa0; --sky:#5bb8ff;
+  --display:"Dela Gothic One","Hiragino Sans","Noto Sans JP",sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif;
+}
+html,body{height:100%}
+body{margin:0; background:radial-gradient(ellipse at 50% 0%, var(--bg2), var(--bg) 70%) fixed; background-color:var(--bg); color:var(--paper); font-family:var(--body); font-size:15px}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--sky); outline-offset:2px}
+h1{font-family:var(--display); font-weight:400; margin:0; letter-spacing:.02em; text-wrap:balance}
+h1 small{display:block; font-family:var(--body); font-size:13px; color:var(--muted); letter-spacing:.12em; font-weight:700}
+
+/* ===== お客さん用 ===== */
+.guest{min-height:100%; box-sizing:border-box; padding-inline:16px; padding-block:24px; display:grid; justify-items:center; align-content:center; gap:18px; text-align:center}
+.guest h1{font-size:clamp(26px,4.2vw,48px)}
+.wheelBox{position:relative; width:min(100%,70vh,640px); aspect-ratio:1; max-width:100%}
+canvas#wheel{width:100%; height:100%; display:block}
+.pointer{position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:22px solid transparent; border-right:22px solid transparent; border-top:44px solid var(--coral); filter:drop-shadow(0 3px 0 #0006); z-index:2}
+.spin{font-family:var(--display); font-size:clamp(24px,3.2vw,34px); border:0; border-radius:18px; padding:14px 64px; background:var(--gold); color:#10283d; cursor:pointer; box-shadow:0 6px 0 #b8871a; transition:transform .08s}
+.spin:active{transform:translateY(4px); box-shadow:0 2px 0 #b8871a}
+.spin:disabled{opacity:.5; cursor:default}
+
+.overlay{position:fixed; inset:0; background:#081a29e0; display:grid; place-items:center; z-index:10; padding:16px}
+.result{text-align:center; display:grid; gap:14px; justify-items:center; animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.result .tag{font-weight:800; letter-spacing:.2em; color:var(--muted)}
+.result .name{font-family:var(--display); font-size:clamp(34px,7vw,80px); line-height:1.15; text-wrap:balance}
+.result .sub{font-size:clamp(16px,2.4vw,22px); color:var(--muted)}
+@keyframes pop{from{transform:scale(.6); opacity:0} to{transform:none; opacity:1}}
+@media (prefers-reduced-motion:reduce){.result{animation:none}}
+#confetti{position:fixed; inset:0; pointer-events:none; z-index:11}
+
+/* ===== スタッフ用 ===== */
+.staff{max-width:1000px; margin:0 auto; padding-inline:16px; padding-block:20px 40px; display:grid; gap:16px}
+.staff header{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px}
+.staff h1{font-size:clamp(22px,3.2vw,32px)}
+.badge{display:inline-block; font-family:var(--body); font-size:12px; font-weight:800; letter-spacing:.1em; background:var(--coral); color:#10283d; border-radius:6px; padding:2px 8px; margin-left:8px; vertical-align:middle}
+.days{display:flex; background:var(--panel); border-radius:999px; padding:4px; gap:4px}
+.days button{font:inherit; font-weight:800; border:0; border-radius:999px; padding:8px 16px; background:transparent; color:var(--muted); cursor:pointer}
+.days button[aria-pressed="true"]{background:var(--gold); color:#10283d}
+.grid{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.col{display:grid; gap:16px}
+.card{background:var(--panel); border-radius:16px; padding:16px}
+.card h2{font-size:13px; letter-spacing:.1em; color:var(--muted); margin:0 0 10px; font-weight:800}
+.latest{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.latest .big{font-family:var(--display); font-size:clamp(20px,3vw,28px)}
+.latest .when{color:var(--muted); font-size:13px}
+.latest.flash{animation:flash 1.2s ease}
+@keyframes flash{0%{background:#ffc93c55} 100%{background:transparent}}
+table{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums}
+th,td{text-align:left; padding:8px 4px; border-bottom:1px solid var(--line)}
+th{font-size:12px; color:var(--muted); font-weight:700}
+td.n,th.n{text-align:right; white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.sw{display:inline-block; width:12px; height:12px; border-radius:4px; margin-right:8px; vertical-align:-1px}
+.stock{display:inline-flex; align-items:center; gap:6px; justify-content:flex-end}
+.stock input.num{width:52px; padding:4px 6px; text-align:right; font-weight:800}
+.stock input.cap{font-weight:500; color:var(--muted)}
+@media (max-width:600px){
+  #tbody, #tbody tr, #tbody td{display:block}
+  .card table thead{display:none}
+  #tbody tr{display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line)}
+  #tbody tr:last-child{border-bottom:0}
+  #tbody td{border:0; padding:0; text-align:left}
+  #tbody td:first-child{grid-column:1/-1; font-weight:700}
+  #tbody td:nth-child(2)::before{content:"確率 "; color:var(--muted); font-size:12px}
+  #tbody td:nth-child(2){grid-column:1/-1}
+  #tbody td:nth-child(2) input{width:64px!important}
+  #tbody td:nth-child(3){grid-column:1/-1; display:flex; align-items:center; gap:8px}
+  #tbody td:nth-child(3)::before{content:"残り／上限"; color:var(--muted); font-size:12px; white-space:nowrap}
+  #tbody .stock{justify-content:flex-start}
+}
+.stock button{font:inherit; font-weight:800; width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:var(--bg2); color:var(--paper); cursor:pointer; line-height:1}
+.stock button:disabled{opacity:.3; cursor:default}
+.out{color:var(--coral); font-weight:800; font-size:12px}
+.stats{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-top:10px}
+.stats b{color:var(--paper); font-size:18px; font-variant-numeric:tabular-nums}
+.row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.row label{color:var(--muted); font-size:13px}
+input[type=number]{font:inherit; width:84px; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg2); color:var(--paper)}
+.btn{font:inherit; font-weight:700; border-radius:10px; padding:8px 12px; border:1px solid var(--line); background:var(--bg2); color:var(--paper); cursor:pointer; text-decoration:none; display:inline-block}
+.btn.warn{border-color:var(--coral); color:var(--coral)}
+.note{font-size:12px; color:var(--muted); margin:8px 0 0; line-height:1.7}
+.log{max-height:260px; overflow:auto; margin:0; padding:0; list-style:none; display:grid; gap:4px; font-size:13px}
+.log li{display:flex; justify-content:space-between; gap:8px; color:var(--muted)}
+.log li b{color:var(--paper); font-weight:700}
+.log li b.lose{color:var(--muted); font-weight:500}
+.sync{font-size:12px; color:var(--muted)}
+.sync::before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--mint); margin-right:6px}
+.sync.local::before{background:var(--gold)}
+.err{color:var(--coral); font-size:13px}
+</style>
+
+</head>
+<body>
+<!-- お客さん用画面 -->
+<main class="guest" id="guestView">
+  <h1 id="secret"><small>文理祭 2026 ・ クイズイベント</small>景品ルーレット</h1>
+  <div class="wheelBox">
+    <div class="pointer" aria-hidden="true"></div>
+    <canvas id="wheel" width="1120" height="1120" aria-label="景品ルーレット"></canvas>
+  </div>
+  <button class="spin" id="spin" disabled>準備中…</button>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="result">
+    <div class="tag" id="rTag"></div>
+    <div class="name" id="rName"></div>
+    <div class="sub" id="rSub"></div>
+    <button class="btn" id="rClose" style="margin-top:8px">とじる</button>
+  </div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<!-- スタッフ用画面（URLの末尾に #staff） -->
+<main class="staff" id="staffView" hidden>
+  <header>
+    <h1><small>文理祭 2026 ・ クイズイベント</small>景品ルーレット<span class="badge">スタッフ用</span></h1>
+    <div class="days" aria-label="開催日"><button disabled aria-pressed="true">10/3・10/4 通し</button></div>
+  </header>
+  <div class="row"><span class="sync" id="sync">接続中…</span><span class="err" id="err"></span></div>
+
+  <div class="card latest" id="latest">
+    <span class="when">最新の結果</span><span class="big" id="lName">—</span><span class="when" id="lTime"></span>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card">
+        <h2>景品の残りと当たる確率</h2>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>景品</th><th class="n">確率（％）</th><th class="n">残り / 上限（2日間）</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="stats">
+          <span>回した回数 <b id="sSpins">0</b></span>
+          <span>当たり <b id="sWins">0</b></span>
+          <span>参加賞 <b id="sLose">0</b></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>設定</h2>
+        <p class="note" style="margin-top:0">確率は表の「％」欄で変えられます。在庫は2日間共有です。「残り」の数字は直接入力か −／＋ で、「上限」（最初は購入数より1個少ない数）も直接入力で変えられます。予備を出すときや、景品を追加したときは上限を増やしてください。売り切れた景品の分は参加賞になります。残り数の残りは上限より多くはできません。</p>
+        <div class="row" style="margin-top:8px"><button class="btn" id="defRates">確率を初期値に戻す</button></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="undo">直前の結果を取り消す</button>
+          <button class="btn warn" id="reset">全体をリセット</button>
+        </div>
+        <div class="row" id="confirmBox" style="margin-top:8px" hidden>
+          <span class="note" style="margin:0">2日間分の在庫と記録を最初に戻しますか？</span>
+          <button class="btn warn" id="resetYes">戻す</button>
+          <button class="btn" id="resetNo">やめる</button>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>記録（新しい順）</h2>
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn" id="csvBtn" hidden>記録をCSVで保存</button>
+          <button class="btn" id="copyBtn">記録をコピー</button>
+          <span class="note" id="csvMsg" style="margin:0"></span>
+        </div>
+        <ol class="log" id="log"></ol>
+      </div>
+      <div class="card">
+        <h2>画面の切り替え</h2>
+        <a class="btn" href="#">お客さん用の画面にする</a>
+        <p class="note">お客さん用画面の「景品ルーレット」の文字を<b>すばやく5回タップ</b>すると、この画面に来られます（お客さんには教えないでください）。URLの末尾に <b>#staff</b> を付けても開けます。</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+const PRIZES = [
+  {id:'tumbler', name:'サーモス 真空断熱タンブラー', short:'タンブラー', total:12, cap:11, color:'#ffc93c'},
+  {id:'seal',    name:'ボンボンドロップシール',        short:'シール',     total:7, cap:6, color:'#ff8ec7'},
+  {id:'squeeze', name:'スクイーズキーホルダー',        short:'スクイーズ', total:30, cap:29, color:'#3ecfa0'},
+  {id:'eraser',  name:'おじさん消しゴム',             short:'消しゴム',   total:24, cap:23, color:'#5bb8ff'},
+  {id:'fusen',   name:'猫・肉球の付箋',               short:'付箋',       total:17, cap:16, color:'#b79cff'},
+];
+const LOSE = {id:'lose', name:'参加賞（ティッシュ）', short:'参加賞', color:'#6f8aa0'};
+const byId = id => PRIZES.find(p=>p.id===id);
+// 上限は2日間共有（購入した個数 − 1 個ずつを予備として残す）
+const dayMax = (p)=>{ const v=Number(M.days?.[1]?.caps?.[p.id]); return Number.isFinite(v)&&v>=0 ? v : p.cap; };
+const eventDay = ts=>{ const d=new Date(ts); return (d.getMonth()===9 && d.getDate()===4) ? 2 : 1; };
+// 初期の当たり確率（％）：タンブラー < シール < スクイーズ < 消しゴム = 付箋
+const DEFAULT_RATES = {tumbler:3, seal:4, squeeze:6.5, eraser:7, fusen:7};
+const defaultDay = ()=>({rates:{...DEFAULT_RATES}, adjust:{}, resetAt:0});
+const rateOf = (pid, day)=>{ const v=Number(M.days[day].rates?.[pid]); return isFinite(v)&&v>=0 ? v : DEFAULT_RATES[pid]; };
+
+/* ---------- 共有データのモデル ----------
+   config/current : {day}
+   days/d1, days/d2 : {rates:{prizeId:%}, adjust:{prizeId:+-n}, resetAt}
+   spins/<id> : {day, prize, ts}   ← 1回まわすごとに1件（追記のみ）
+   残り数 = 用意数 − その日の当選数 + 手動調整（0〜用意数に収める） */
+const M = {day:1, days:{1:defaultDay(), 2:defaultDay()}, dayExists:{1:false,2:false}, spins:[], ready:false};
+let backend = null;
+
+function winsOf(pid){ const r=M.days[1].resetAt||0; return M.spins.filter(s=>s.prize===pid && s.ts>r).length; }
+function remaining(pid, day){
+  const d=M.days[day], p=byId(pid);
+  const wins=winsOf(pid);
+  const r = dayMax(p,day) - wins + (Number(d.adjust?.[pid])||0);
+  return Math.max(0, Math.min(dayMax(p,day), r));
+}
+function daySpins(day){ const r=M.days[1].resetAt||0; return M.spins.filter(s=>s.ts>r).sort((a,b)=>b.ts-a.ts); }
+function probs(day){
+  const d=M.days[day];
+  const list=PRIZES.map(p=>{ const left=remaining(p.id,day); return {...p, left, rate:rateOf(p.id,day)/100, p: left>0 ? rateOf(p.id,day)/100 : 0}; });
+  return {list, lose:1-list.reduce((a,x)=>a+x.p,0)};
+}
+
+/* ---------- 保存先：共有DB（本番）／ブラウザ内（予備） ---------- */
+function makeDbBackend(db){
+  const ref = {cfg:db.doc('config/current'), d1:db.doc('days/d1'), d2:db.doc('days/d2'), spins:db.collection('spins')};
+  let n=0; const done=()=>{ if(++n>=4){ M.ready=true; render(); } };
+  const once=f=>{let c=false; return x=>{ f(x); if(!c){c=true; done();} else render(); };};
+  const onErr=e=>{ setErr('同期が止まりました。ページを再読み込みしてください（'+e.code+'）'); };
+  ref.cfg.onSnapshot(once(s=>{ const v=s.exists?s.data():null; M.cfgExists=s.exists; }), onErr);
+  [1,2].forEach(k=>ref['d'+k].onSnapshot(once(s=>{ M.dayExists[k]=s.exists; M.days[k]= s.exists ? {...defaultDay(), ...s.data()} : defaultDay(); }), onErr));
+  ref.spins.orderBy('ts','desc').limit(1000).onSnapshot(once(q=>{ M.spins=q.docs.map(d=>({id:d.id, ...d.data()})); }), onErr);
+  const wrap = p => p.catch(e=>{ setErr(e.code==='invalid_argument' ? 'この画面からは書き込めません（編集権限が必要です）' : '保存に失敗しました（'+e.code+'）'); throw e; });
+  return {
+    kind:'db',
+    setDay: day => wrap(ref.cfg.set({day})),
+    patchDay: (day, patch) => wrap(M.dayExists[day] ? ref['d'+day].update(patch) : ref['d'+day].set({...M.days[day], ...patch})),
+    addSpin: spin => wrap(ref.spins.add(spin)),
+    deleteSpin: id => wrap(ref.spins.doc(id).delete()),
+  };
+}
+function makeLocalBackend(){
+  const KEY='bunrisai-roulette-v2';
+  const read=()=>{ try{ const t=localStorage.getItem(KEY); if(t){ const v=JSON.parse(t); M.days={1:{...defaultDay(),...v.days?.[1]},2:{...defaultDay(),...v.days?.[2]}}; M.spins=v.spins||[]; } }catch(e){} };
+  const write=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({day:M.day, days:M.days, spins:M.spins})); }catch(e){} render(); };
+  read(); M.ready=true;
+  addEventListener('storage', e=>{ if(e.key===KEY){ read(); render(); } }); // 同じPCの別タブと連動
+  return {
+    kind:'local',
+    setDay: async day => { M.day=day; write(); },
+    patchDay: async (day, patch) => { const d=M.days[day]; M.days[day]={...d, ...patch, adjust:{...d.adjust, ...(patch.adjust||{})}}; write(); },
+    addSpin: async spin => { M.spins.unshift({id:'l'+spin.ts+Math.random().toString(36).slice(2,6), ...spin}); write(); },
+    deleteSpin: async id => { M.spins=M.spins.filter(s=>s.id!==id); write(); },
+  };
+}
+function setErr(t){ document.getElementById('err').textContent=t||''; }
+
+async function initBackend(){
+  let db=null;
+  try{ db = window.claude && window.claude.use ? await window.claude.use('db') : null; }catch(e){ db=null; }
+  backend = db ? makeDbBackend(db) : makeLocalBackend();
+  const sync=document.getElementById('sync');
+  sync.textContent = db ? '共有中：ほかの端末とリアルタイムで連動しています' : 'このスマホのブラウザに保存中（この端末だけで使ってください）';
+  sync.classList.toggle('local', !db);
+  render();
+}
+
+/* ---------- ルーレット描画 ---------- */
+function segments(){
+  const {list,lose}=probs(M.day);
+  const active=list.filter(x=>x.p>0);
+  if(!active.length) return [{...LOSE, p:1, w:1}];
+  const segs=[], each=lose/active.length;
+  active.forEach(x=>{ segs.push({...x}); if(each>0) segs.push({...LOSE, p:each}); });
+  // 見た目のマスはすべて同じ幅（当たる確率 p とは別に、表示用の幅 w を持たせる）
+  segs.forEach(g=>g.w=1/segs.length);
+  return segs;
+}
+const cv=document.getElementById('wheel'), ctx=cv.getContext('2d');
+let rot=0, spinning=false, frozen=null;
+function draw(segs){
+  segs = segs || segments();
+  const W=cv.width, R=W/2-20, c=W/2;
+  ctx.clearRect(0,0,W,W);
+  ctx.save(); ctx.translate(c,c);
+  ctx.beginPath(); ctx.arc(0,0,R+14,0,Math.PI*2); ctx.fillStyle='#fdf6e3'; ctx.fill();
+  ctx.rotate(rot);
+  let a=-Math.PI/2;
+  segs.forEach(s=>{
+    const sw=s.w*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,a,a+sw); ctx.closePath();
+    ctx.fillStyle=s.color; ctx.fill(); ctx.strokeStyle='#10283d'; ctx.lineWidth=4; ctx.stroke();
+    ctx.save(); ctx.rotate(a+sw/2); ctx.textAlign='right'; ctx.textBaseline='middle';
+    const fs=Math.max(20, Math.min(44, sw*R*0.55));
+    ctx.font=`800 ${fs}px "M PLUS Rounded 1c", sans-serif`;
+    ctx.fillStyle = s.id==='lose' ? '#fdf6e3' : '#10283d';
+    ctx.fillText(s.short, R-28, 0); ctx.restore();
+    s.start=a; a+=sw;
+  });
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(c,c,70,0,Math.PI*2); ctx.fillStyle='#10283d'; ctx.fill();
+  ctx.lineWidth=10; ctx.strokeStyle='#fdf6e3'; ctx.stroke();
+  ctx.fillStyle='#ffc93c'; ctx.font='36px "Dela Gothic One", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('文理祭',c,c+2);
+  return segs;
+}
+const rand=()=>{ const b=new Uint32Array(1); crypto.getRandomValues(b); return b[0]/2**32; };
+function pick(segs){ const r=rand(); let acc=0; for(let i=0;i<segs.length;i++){ acc+=segs[i].p; if(r<acc) return i; } return segs.length-1; }
+
+let ac=null;
+function audio(){ try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); return ac; }catch(e){ return null; } }
+function tick(){ const a=audio(); if(!a) return; const o=a.createOscillator(), g=a.createGain(); o.type='square'; o.frequency.value=900; g.gain.setValueAtTime(.06,a.currentTime); g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.04); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+.05); }
+function fanfare(win){ const a=audio(); if(!a) return; (win?[523,659,784,1047]:[392,330]).forEach((f,i)=>{ const o=a.createOscillator(),g=a.createGain(); o.type='triangle'; o.frequency.value=f; const t=a.currentTime+i*.12; g.gain.setValueAtTime(.12,t); g.gain.exponentialRampToValueAtTime(.0001,t+.35); o.connect(g).connect(a.destination); o.start(t); o.stop(t+.4); }); }
+
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TAU=Math.PI*2, norm=x=>((x%TAU)+TAU)%TAU;
+function spin(){
+  if(spinning || !M.ready || !backend || !overlay.hidden) return;
+  const segs=draw(); frozen=segs;
+  const s=segs[pick(segs)];
+  const within=s.start + (0.15+0.7*rand())*s.w*TAU;
+  const from=rot, delta=norm((-Math.PI/2-within)-from) + TAU*(reduce?1:6);
+  const dur=reduce?800:5200, t0=performance.now(), day=M.day;
+  spinning=true; spinBtn.disabled=true;
+  let last=-1;
+  (function frame(now){
+    const t=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-t,4);
+    rot=from+delta*e; draw(segs);
+    const pa=norm(-rot); let a=0,k=0; for(;k<segs.length;k++){ a+=segs[k].w*TAU; if(pa<a) break; }
+    if(k!==last){ if(last!==-1) tick(); last=k; }
+    if(t<1) requestAnimationFrame(frame);
+    else { rot=norm(rot); finish(s, day); }
+  })(t0);
+}
+async function finish(s, day){
+  const win=s.id!=='lose';
+  document.getElementById('rTag').textContent = win?'おめでとう！':'ざんねん…';
+  const nm=document.getElementById('rName');
+  nm.textContent = win ? s.name : '参加賞';
+  nm.style.color = win ? s.color : 'var(--paper)';
+  document.getElementById('rSub').textContent = win ? 'スタッフから景品を受け取ってください' : 'ティッシュをどうぞ。参加ありがとう！';
+  overlay.hidden=false; fanfare(win); if(win && !reduce) confetti(s.color);
+  document.getElementById('rClose').focus();
+  try{ const ts=Date.now(); await backend.addSpin({day:eventDay(ts), prize:s.id, ts}); }catch(e){}
+  spinning=false; frozen=null; render();
+}
+
+/* ---------- スタッフ画面 ---------- */
+const tbody=document.getElementById('tbody');
+let lastTopId=null;
+function renderStaff(){
+  const day=M.day;
+  const {list,lose}=probs(day);
+  const editing=document.activeElement&&document.activeElement.tagName==='INPUT'&&tbody.contains(document.activeElement);
+  if(!editing){
+  tbody.innerHTML='';
+  list.forEach(x=>{
+    const max=dayMax(x,day), tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sw" style="background:${x.color}"></span>${x.name}</td>
+      <td class="n">${x.left>0?'':'<span class="out">売り切れ</span> '}<input type="number" class="rate" data-rate="${x.id}" aria-label="${x.short}の確率（％）" min="0" max="100" step="0.5" value="${rateOf(x.id,day)}" style="width:64px"></td>
+      <td class="n"><span class="stock">
+        <button aria-label="${x.short}の残りを1つ減らす" data-id="${x.id}" data-v="-1" ${x.left<=0?'disabled':''}>−</button>
+        <input type="number" class="num" data-left="${x.id}" aria-label="${x.short}の残り個数" min="0" max="${max}" step="1" value="${x.left}">
+        <span style="color:var(--muted)">/</span>
+        <input type="number" class="num cap" data-cap="${x.id}" aria-label="${x.short}の上限（2日間）" min="0" max="999" step="1" value="${max}">
+        <button aria-label="${x.short}の残りを1つ増やす" data-id="${x.id}" data-v="1" ${x.left>=max?'disabled':''}>＋</button>
+      </span></td>`;
+    tbody.appendChild(tr);
+  });
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><span class="sw" style="background:${LOSE.color}"></span>${LOSE.name}</td><td class="n">${(lose*100).toFixed(1)}%</td><td class="n" style="color:var(--muted)">—</td>`;
+  tbody.appendChild(tr);
+  }
+
+  const sp=daySpins(day), wins=sp.filter(s=>s.prize!=='lose').length;
+  document.getElementById('sSpins').textContent=sp.length;
+  document.getElementById('sWins').textContent=wins;
+  document.getElementById('sLose').textContent=sp.length-wins;
+
+  const log=document.getElementById('log'); log.innerHTML='';
+  if(!sp.length) log.innerHTML='<li>まだ回していません</li>';
+  sp.forEach((s,i)=>{
+    const li=document.createElement('li'), w=s.prize!=='lose';
+    li.innerHTML=`<span>#${sp.length-i} <b class="${w?'':'lose'}">${w?byId(s.prize).name:'参加賞'}</b></span><span>${fmtDate(s.ts)}（${eventDay(s.ts)}日目） ${fmt(s.ts)}</span>`;
+    log.appendChild(li);
+  });
+  const top=sp[0], L=document.getElementById('latest');
+  document.getElementById('lName').textContent = top ? (top.prize==='lose'?'参加賞（ティッシュ）':byId(top.prize).name+' 当選！') : '—';
+  document.getElementById('lName').style.color = top && top.prize!=='lose' ? byId(top.prize).color : 'var(--paper)';
+  document.getElementById('lTime').textContent = top ? fmt(top.ts) : '';
+  if(top && lastTopId && top.id!==lastTopId){ L.classList.remove('flash'); void L.offsetWidth; L.classList.add('flash'); }
+  lastTopId = top ? top.id : null;
+}
+const fmtDate=ts=>{ const d=new Date(ts); return (d.getMonth()+1)+'/'+d.getDate(); };
+function buildCsv(){
+  const sp=daySpins(1).slice().reverse();
+  const rows=[['番号','日付','何日目','時刻','結果','当たり/参加賞']];
+  sp.forEach((s,i)=>{ const w=s.prize!=='lose'; rows.push([i+1, fmtDate(s.ts), eventDay(s.ts)+'日目', fmt(s.ts), w?byId(s.prize).name:'参加賞（ティッシュ）', w?'当たり':'参加賞']); });
+  return '\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+}
+const csvMsg=t=>{ document.getElementById('csvMsg').textContent=t; };
+(async()=>{ let dl=null; try{ dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null; }catch(e){}
+  const b=document.getElementById('csvBtn'); b.hidden=false;
+  if(!dl){ b.onclick=()=>{ const url=URL.createObjectURL(new Blob([buildCsv()],{type:'text/csv'})); const a=document.createElement('a'); a.href=url; a.download='文理祭ルーレット記録.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); csvMsg('保存しました'); }; return; }
+  b.onclick=async()=>{ try{ await dl.save({filename:'文理祭ルーレット記録.csv', data:buildCsv()}); csvMsg('保存しました'); }catch(e){ csvMsg(e.code==='declined'?'保存をやめました':'保存できませんでした（'+e.code+'）'); } };
+})();
+document.getElementById('copyBtn').onclick=async()=>{
+  const text=buildCsv().slice(1).replace(/"/g,'').replace(/,/g,'\t');
+  try{ await navigator.clipboard.writeText(text); csvMsg('コピーしました（スプレッドシートに貼り付けできます）'); }
+  catch(e){ csvMsg('コピーできませんでした'); }
+};
+const fmt=ts=>new Date(ts).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+tbody.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-id]'); if(!b||!backend) return;
+  const id=b.dataset.id, v=Number(b.dataset.v), day=M.day, max=dayMax(byId(id),day), left=remaining(id,day);
+  if((v>0 && left>=max) || (v<0 && left<=0)) return; // 上限・下限でストップ
+  const cur=Number(M.days[day].adjust?.[id])||0;
+  backend.patchDay(day, {adjust:{[id]: cur+v}}).catch(()=>{});
+});
+// 残り個数を直接入力：0〜上限の範囲で、その数になるように調整値を決める
+function setLeft(id, target){
+  const max=dayMax(byId(id)); target=Math.max(0, Math.min(max, Math.round(target)));
+  backend.patchDay(M.day,{adjust:{[id]: target-(max-winsOf(id))}}).then(render).catch(()=>{});
+}
+tbody.addEventListener('focusout',()=>setTimeout(render,0)); // 入力を終えたら表を最新にする
+tbody.addEventListener('change',e=>{
+  const L=e.target.closest('input[data-left]'), C=e.target.closest('input[data-cap]');
+  if(L && backend){ const v=Number(L.value); if(!(v>=0)){ render(); return; } if(v>dayMax(byId(L.dataset.left))) setErr('残りは上限より多くできません。先に上限を増やしてください'); else setErr(''); setLeft(L.dataset.left, v); return; }
+  if(C && backend){
+    const id=C.dataset.cap, v=Math.round(Number(C.value)); if(!(v>=0)){ render(); return; }
+    const left=remaining(id,M.day), caps={...(M.days[1].caps||{}), [id]:v};
+    // 上限を変えても、今の残り数はそのまま（新しい上限を超える分だけ減らす）
+    const newLeft=Math.min(left, v);
+    setErr(''); backend.patchDay(1,{caps, adjust:{[id]: newLeft-(v-winsOf(id))}}).then(render).catch(()=>{});
+    return;
+  }
+  const inp=e.target.closest('input[data-rate]'); if(!inp||!backend) return;
+  const v=Number(inp.value), id=inp.dataset.rate;
+  const others=PRIZES.filter(p=>p.id!==id).reduce((a,p)=>a+rateOf(p.id,M.day),0);
+  if(!(v>=0) || v+others>100){ setErr('確率の合計が100%を超えないようにしてください'); render(); return; }
+  setErr(''); backend.patchDay(M.day,{rates:{...M.days[M.day].rates, [id]:v}}).catch(()=>{});
+});
+document.getElementById('defRates').onclick=()=>{ backend && backend.patchDay(M.day,{rates:{...DEFAULT_RATES}}).catch(()=>{}); };
+document.getElementById('undo').onclick=()=>{ const top=daySpins(M.day)[0]; if(top && backend) backend.deleteSpin(top.id).catch(()=>{}); };
+const cb=document.getElementById('confirmBox');
+document.getElementById('reset').onclick=()=>{ cb.hidden=false; };
+document.getElementById('resetNo').onclick=()=>{ cb.hidden=true; };
+document.getElementById('resetYes').onclick=()=>{ cb.hidden=true; backend && backend.patchDay(M.day,{adjust:Object.fromEntries(PRIZES.map(p=>[p.id,0])), resetAt:Date.now()}).catch(()=>{}); };
+
+/* ---------- 画面の切り替え ---------- */
+const guestView=document.getElementById('guestView'), staffView=document.getElementById('staffView');
+const spinBtn=document.getElementById('spin'), overlay=document.getElementById('overlay');
+const isStaff=()=>location.hash==='#staff';
+function render(){
+  guestView.hidden=isStaff(); staffView.hidden=!isStaff();
+  if(isStaff()) renderStaff();
+  else {
+    if(!spinning){ draw(); spinBtn.disabled=!M.ready; spinBtn.textContent = M.ready ? 'まわす！' : '準備中…'; }
+  }
+}
+addEventListener('hashchange', ()=>{ overlay.hidden=true; render(); });
+spinBtn.onclick=()=>{ keepAwake(); spin(); };
+// タイトルを5回すばやくタップでスタッフ用画面へ
+let taps=[]; document.getElementById('secret').addEventListener('click',()=>{ const t=Date.now(); taps=taps.filter(x=>t-x<2000); taps.push(t); if(taps.length>=5){ taps=[]; location.hash='staff'; } });
+// 画面が自動で暗くならないようにする（対応していない端末では何もしない）
+let wakeLock=null;
+async function keepAwake(){ try{ if('wakeLock' in navigator && !wakeLock){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; }); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wakeLock===null) keepAwake(); });
+document.getElementById('rClose').onclick=()=>{ overlay.hidden=true; stopConfetti(); spinBtn.focus(); };
+document.addEventListener('keydown',e=>{
+  if(isStaff() || e.target.tagName==='INPUT') return;
+  if(!overlay.hidden && (e.key==='Enter'||e.key==='Escape'||e.key===' ')){ e.preventDefault(); if(!spinning) document.getElementById('rClose').click(); return; }
+  if(e.key===' ' && overlay.hidden){ e.preventDefault(); spin(); }
+});
+
+/* 紙吹雪 */
+const cc=document.getElementById('confetti'), cx=cc.getContext('2d'); let parts=[], raf=0;
+function confetti(main){
+  cc.hidden=false; cc.width=innerWidth; cc.height=innerHeight;
+  const cols=[main,'#ffc93c','#fdf6e3','#ff6b57','#3ecfa0'];
+  parts=Array.from({length:160},()=>({x:Math.random()*cc.width, y:-20-Math.random()*cc.height*.5, vx:(Math.random()-.5)*3, vy:2+Math.random()*4, r:Math.random()*6.28, vr:(Math.random()-.5)*.3, s:6+Math.random()*8, c:cols[Math.floor(Math.random()*cols.length)]}));
+  cancelAnimationFrame(raf);
+  (function f(){ cx.clearRect(0,0,cc.width,cc.height); let alive=0;
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; if(p.y<cc.height+20) alive++; cx.save(); cx.translate(p.x,p.y); cx.rotate(p.r); cx.fillStyle=p.c; cx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2); cx.restore(); });
+    if(alive) raf=requestAnimationFrame(f); else stopConfetti(); })();
+}
+function stopConfetti(){ cancelAnimationFrame(raf); cx.clearRect(0,0,cc.width,cc.height); cc.hidden=true; }
+
+initBackend();
+document.fonts && document.fonts.ready.then(()=>{ if(!spinning && !isStaff()) draw(); });
+render();
+})();
+</script>
+
+</body>
+</html>
